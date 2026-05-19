@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Professional Todo App</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="manifest" href="manifest.json">
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>🚀 Professional Todo App</h1>
+
+
+        <!-- Top Input Row -->
+        <div class="top-box">
+
+            <input type="text"
+            id="taskInput"
+            placeholder="Enter task">
+
+            <button id="addBtn">
+                ➕ Add Task
+            </button>
+
+        </div>
+
+
+        <!-- Priority Radio Buttons -->
+        <div class="priority-box">
+
+            <label>
+                <input type="radio"
+                name="priority"
+                value="High"
+                checked>
+
+                🔴 High
+            </label>
+
+            <label>
+                <input type="radio"
+                name="priority"
+                value="Medium">
+
+                🟠 Medium
+            </label>
+
+            <label>
+                <input type="radio"
+                name="priority"
+                value="Low">
+
+                🟢 Low
+            </label>
+
+        </div>
+
+
+        <!-- Search -->
+        <input type="text"
+        id="searchTask"
+        placeholder="🔍 Search task">
+
+
+        <!-- Stats -->
+        <div class="stats">
+
+            <p id="totalTasks">Total Tasks: 0</p>
+
+            <p id="pendingTasks">Pending Tasks: 0</p>
+
+            <p id="completedTasks">Completed Tasks: 0</p>
+
+        </div>
+
+
+        <!-- Pending -->
+        <h2>Pending Tasks</h2>
+
+        <div id="taskList"></div>
+
+
+        <!-- Completed -->
+        <h2>Completed Tasks</h2>
+
+        <div id="historyList"></div>
+
+    </div>
+
+
+
+
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    deleteDoc,
+    updateDoc,
+    doc
+}
+from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+
+
+
+
+
+const firebaseConfig = {
+
+  apiKey: "AIzaSyBEv8Gmse1n6lIiFDQoGRMzMgbSCy8yoUs",
+
+  authDomain: "todo-app-32cf5.firebaseapp.com",
+
+  projectId: "todo-app-32cf5",
+
+  storageBucket: "todo-app-32cf5.firebasestorage.app",
+
+  messagingSenderId: "843919678306",
+
+  appId: "1:843919678306:web:04d7a69d1976db6a59ea3b"
+
+};
+
+
+
+
+
+
+const app = initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+
+
+
+
+
+
+
+
+
+async function addTask(){
+
+    let input = document.getElementById("taskInput");
+
+    let taskText = input.value.trim();
+
+    let priority =
+    document.querySelector(
+    'input[name="priority"]:checked'
+    ).value;
+
+
+
+    if(taskText == ""){
+
+        alert("Enter task");
+
+        return;
+    }
+
+
+
+    let now = new Date();
+
+    let date = now.toLocaleDateString();
+
+    let day = now.toLocaleString(
+        'en-US',
+        { weekday: 'long' }
+    );
+
+
+
+
+    await addDoc(collection(db, "tasks"), {
+
+        text: taskText,
+
+        priority: priority,
+
+        date: date,
+
+        day: day,
+
+        completed: false
+
+    });
+
+
+
+
+    input.value = "";
+
+    showTasks();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+async function completeTask(id){
+
+    const taskRef = doc(db, "tasks", id);
+
+    await updateDoc(taskRef, {
+
+        completed: true
+
+    });
+
+    showTasks();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function deleteTask(id){
+
+    await deleteDoc(doc(db, "tasks", id));
+
+    showTasks();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function editTask(id, oldText){
+
+    let newText = prompt(
+        "Edit Task",
+        oldText
+    );
+
+    if(newText == null ||
+    newText.trim() == ""){
+
+        return;
+    }
+
+    const taskRef = doc(db, "tasks", id);
+
+    await updateDoc(taskRef, {
+
+        text: newText
+
+    });
+
+    showTasks();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function showTasks(){
+
+    let taskList =
+    document.getElementById("taskList");
+
+    let historyList =
+    document.getElementById("historyList");
+
+    let search =
+    document.getElementById("searchTask")
+    .value.toLowerCase();
+
+    taskList.innerHTML = "";
+
+    historyList.innerHTML = "";
+
+
+
+    let total = 0;
+
+    let pending = 0;
+
+    let completed = 0;
+
+
+
+    let querySnapshot =
+    await getDocs(collection(db, "tasks"));
+
+
+
+    querySnapshot.forEach((item)=>{
+
+        let task = item.data();
+
+        let id = item.id;
+
+
+
+        total++;
+
+
+
+        if(task.completed){
+
+            completed++;
+
+        }else{
+
+            pending++;
+        }
+
+
+
+        if(
+            !task.text
+            .toLowerCase()
+            .includes(search)
+        ){
+            return;
+        }
+
+
+
+        let div =
+        document.createElement("div");
+
+        div.classList.add("task");
+
+
+
+        div.innerHTML = `
+
+            <strong>${task.text}</strong>
+
+            <br><br>
+
+            <span class="
+                ${
+                    task.priority == 'High'
+                    ? 'priority-high'
+                    : task.priority == 'Medium'
+                    ? 'priority-medium'
+                    : 'priority-low'
+                }
+            ">
+
+            ${task.priority} Priority
+
+            </span>
+
+            <br><br>
+
+            📅 ${task.day} - ${task.date}
+
+            <br><br>
+
+            ${
+                !task.completed
+                ? `
+                <button onclick=
+                "completeTask('${id}')">
+                ✅ Done
+                </button>
+                `
+                : `
+                <span class="completed-text">
+                ✔ Completed
+                </span>
+                `
+            }
+
+            <button onclick=
+            "editTask('${id}',
+            '${task.text}')">
+
+            ✏ Edit
+
+            </button>
+
+            <button onclick=
+            "deleteTask('${id}')">
+
+            🗑 Delete
+
+            </button>
+
+        `;
+
+
+
+        if(task.completed){
+
+            historyList.appendChild(div);
+
+        }else{
+
+            taskList.appendChild(div);
+
+        }
+
+    });
+
+
+
+    document.getElementById(
+    "totalTasks").innerHTML =
+    "Total Tasks: " + total;
+
+    document.getElementById(
+    "pendingTasks").innerHTML =
+    "Pending Tasks: " + pending;
+
+    document.getElementById(
+    "completedTasks").innerHTML =
+    "Completed Tasks: " + completed;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+window.completeTask = completeTask;
+
+window.deleteTask = deleteTask;
+
+window.editTask = editTask;
+
+
+
+
+
+
+
+
+
+document.getElementById("addBtn")
+.addEventListener("click", addTask);
+
+
+
+
+
+document.getElementById("taskInput")
+.addEventListener("keypress",
+function(e){
+
+    if(e.key === "Enter"){
+
+        addTask();
+
+    }
+
+});
+
+
+
+
+
+document.getElementById("searchTask")
+.addEventListener("keyup", showTasks);
+
+
+
+
+
+
+showTasks();
+
+
+
+
+
+
+
+
+
+
+if("serviceWorker" in navigator){
+
+    navigator.serviceWorker
+    .register("service-worker.js")
+
+    .then(()=>{
+
+        console.log(
+        "Service Worker Registered"
+        );
+
+    });
+
+}
+
+</script>
+
+</body>
+
+</html>
